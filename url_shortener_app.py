@@ -28,19 +28,21 @@ Base.metadata.create_all(engine)
 def generate_short_url():
 
     while True:
+        # Generate a random 6-characters string
         characters = string.ascii_letters + string.digits
         short_url = ''.join(random.choice(characters) for _ in range(6))
 
-        
-        #TODO: Add a check that the short_url is not in the database yet
-        url_existing = False
-        if not url_existing: 
-            return short_url
-        
+        # Check whether the shortened URL is unique or is already present in the database
+        session = Session()
+        url_already_exists  = session.query(UrlMapping).filter_by(short_url=short_url).first()
 
-# def shorten_url():
+        if url_already_exists: 
+            continue # If already present, generate a new one
+
+        session.close()
+            
+        return short_url
     
-
 
 @app.route('/shorten', methods=['GET', 'POST'])
 def shorten_url():
