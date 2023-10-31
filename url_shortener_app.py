@@ -32,6 +32,14 @@ Base.metadata.create_all(engine)
 
 
 def generate_short_url():
+    """Generate a unique 6-characters URL
+
+    This function generates a random 6-characters short URL, with both numbers and digits. 
+    It also checks in our database to make sure that the randomly generated URL is unique
+
+    Returns:
+        short_url (str): randomly-generated short URL
+    """
 
     while True:
         # Generate a random 6-characters string
@@ -51,8 +59,36 @@ def generate_short_url():
         return short_url
 
 
-@app.route('/shorten', methods=['GET', 'POST'])
+@app.route('/shorten', methods=['POST'])
 def shorten_url():
+    """Shorten a long URL and store it in a database or retrieve the existing shrot URL
+
+    This route accepts a POST request with a JSON payload containing the URL to shorten.
+    It checks if the URL is already existent in the database. If it does, it returns the 
+    existing short URL. If it doesn't it generates a new short URL, stores it in the database,
+    and return it
+
+    Returns:
+        response (JSON): A JSON response containing the short URL:
+        {"Location": "/urls/<short_url>}
+
+    If the long URL is missing in the request, it returns an error response:
+    {'error': "URL is required, please make sure there is an element called 'url' in the JSON you're passing"}
+
+    HTTP Method: POST
+    URL: /shorten
+    Content-Type: application/json
+
+    Example JSON Payload:
+    {
+        "url": "https://example.com/oo/bar
+    }
+
+    HTTP Status Codes:
+    - 201 (Created) if a new short URL is generated
+    - 303 (See Other) if the long URL was alredy mapped
+    - 400 (Bad Request) if the long URL already exists in the database
+    """
 
     data = request.get_json()
     input_url = data.get('url')
@@ -69,7 +105,6 @@ def shorten_url():
         session.close()
         return jsonify({'Location': "/urls/{}".format(url_already_mapped.short_url)}), 303
 
-
     # If URL is not in the database yet, add it to the database
     short_url = generate_short_url()
     session.add(UrlMapping(short_url=short_url, long_url=input_url))
@@ -81,6 +116,36 @@ def shorten_url():
 
 @app.route('/urls/<shortcode>/stats', methods=['GET'])
 def get_url_stats(shortcode):
+    """Retrieves the statistics of a shortened URL
+
+    This route accepts a GET request at the URL: /urls/<short_url>/stats. 
+    It checks if the shortened URL is in the database. If it does, it returns
+    a statistics about the short URL. If it doesn't it returns an error.
+
+    Args:
+        shortcode (str): The shortened URL of which the user wants to check statistics
+
+    Returns:
+        response (JSON): a JSON response containing how many times the short URL
+        has been visited, the (long) URL it corresponds to, and the day in which 
+        the short URL has been created:
+        {
+            "hits": <hit_count>,
+            "url": <long_url>,
+            "created_on": <created_date>
+        }
+
+        If the short URL provided through <shortcode> is not in the database, 
+        it returns an error response, also JSON:
+        {"error": "Short URL not found"}
+
+        HTTP Method: GET
+        URL: /urls/<shortcode>/stats
+
+        HTTP Status Codes:
+        - 200 (OK) if the short URL is in the database
+        - 404 (Error) if the short URL is not in the database
+    """
 
     session = Session()
 
@@ -102,6 +167,31 @@ def get_url_stats(shortcode):
 
 @app.route('/urls/<shortcode>', methods=['GET'])
 def shortened_url(shortcode):
+    """Returns the long URL to which the shortened URL corresponds to
+
+    This route accepts a GET request at the URL: /urls/<shortcode>. 
+    It checks if the shortened URL is in the database. If it does, it returns
+    the corresponding long URL. If it doesn't it returns an error.
+
+    Args:
+        shortcode (str): The shortened URL of which the user wants to check statistics
+
+    Returns:
+        response (JSON): a JSON response containing the long URL corresponding to
+        the short URL in the request:
+        {"Location": "<long_url>"}
+
+        If the short URL provided through <shortcode> is not in the database, 
+        it returns an error response, also JSON:
+        {"error": "Short URL not present in database, please make sure it's written correctly"}
+
+        HTTP Method: GET
+        URL: /urls/<shortcode>
+
+        HTTP Status Codes:
+        - 307 (Temporary Redirect) if the short URL is in the database
+        - 404 (Error) if the short URL is not in the database
+    """
 
     session = Session()
 
