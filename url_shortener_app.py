@@ -66,15 +66,8 @@ def shorten_url():
         session.close()
         return jsonify({'Location': "/urls/{}".format(url_already_mapped.short_url)}), 303
 
-    # Check if the user input a short URL and, if yes, return the corresponding original URL
-    is_short_url = session.query(UrlMapping).filter_by(
-        short_url=input_url).first()
 
-    if is_short_url:
-        session.close()
-        return jsonify({'Location': "{}".format(is_short_url.long_url)}), 307
-
-    # If none of the conditions before applies, add URL to the database
+    # If URL is not in the database yet, add it to the database
     short_url = generate_short_url()
     session.add(UrlMapping(short_url=short_url, long_url=input_url))
     session.commit()
