@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify
-from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base
 import string
 import random
+import datetime
 
 app = Flask(__name__)
 
@@ -22,6 +23,8 @@ class UrlMapping(Base):
     id = Column(Integer, primary_key=True)
     short_url = Column(String)
     long_url = Column(String)
+    created_on = Column(DateTime, default=datetime.datetime.utcnow)
+    hit_count = Column(Integer, default=0)
 
 
 # Initialize all database tables
@@ -74,6 +77,49 @@ def shorten_url():
     session.close()
 
     return jsonify({'Location': "/urls/{}".format(short_url)}), 201
+
+
+@app.route('/urls/<shortcode>/stats', methods=['GET'])
+def get_url_stats(shortcode):
+
+    session = Session()
+
+    selected_url = session.query(UrlMapping).filter_by(
+        short_url=shortcode).first()
+
+    if selected_url:
+        stats = {
+            "hits": selected_url.hit_count,
+            "url": selected_url.long_url,
+            "created_on": selected_url.created_on.isoformat(),
+        }
+        session.close()
+        return jsonify(stats), 200
+    else:
+        session.close()
+        return jsonify({"error": "Short URL not found"}), 404
+
+
+@app.route('/urls/<shortcode>', methods=['GET'])
+def shortened_url(shortcode):
+
+    session = Session()
+
+    selected_url = session.query(UrlMapping).filter_by(
+        short_url=shortcode).first()
+
+    if selected_url:
+        # Pick out the long URL before updating the session
+        long_url = selected_url.long_url
+        # Update the hit count of the short URL
+        selected_url.hit_count += 1
+        session.commit()
+        session.close()
+
+        return jsonify({'Location': "{}".format(long_url)}), 307
+    else:
+        session.close()
+        return jsonify({"error": "Short URL not present in database, please make sure it's written correctly"}), 404
 
 
 app.run()
