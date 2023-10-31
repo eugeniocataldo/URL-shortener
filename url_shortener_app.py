@@ -48,14 +48,14 @@ def generate_short_url():
 def shorten_url():
 
     data = request.get_json()
-    long_url = data.get('url')
+    input_url = data.get('url')
 
-    if not long_url:
+    if not input_url:
         return jsonify({'error': "URL is required, please make sure there is an element called 'url' in the JSON you're passing"}), 400
     
-    # Check if the URL is already in the database
+    # Check if the long URL is already in the database and, if yes, return the corresponding shortened URL
     session = Session()
-    url_already_mapped = session.query(UrlMapping).filter_by(long_url=long_url).first()
+    url_already_mapped = session.query(UrlMapping).filter_by(long_url=input_url).first()
 
     if url_already_mapped:
         session.close()
@@ -64,7 +64,7 @@ def shorten_url():
     
     # Add URL to my database
     short_url = generate_short_url()
-    session.add(UrlMapping(short_url=short_url, long_url=long_url))
+    session.add(UrlMapping(short_url=short_url, long_url=input_url))
     session.commit()
     session.close()
 
