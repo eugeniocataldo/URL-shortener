@@ -87,8 +87,8 @@ def shorten_url():
 
     HTTP Status Codes:
     - 201 (Created) if a new short URL is generated
-    - 303 (See Other) if the long URL was alredy mapped
-    - 400 (Bad Request) if the long URL already exists in the database
+    - 303 (See Other) if the long URL already exists in the database
+    - 400 (Bad Request) if no url is provided
     """
 
     data = request.get_json()
@@ -217,7 +217,7 @@ def shortened_url(shortcode):
     else:
         session.close()
         return jsonify({
-            "Error": "Short URL not found"
+            "Error": "Short URL not found",
             "Message": "The short URL was not found in the database, please check if it's correct",
         }), 404
 
