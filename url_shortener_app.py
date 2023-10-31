@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.exc import SQLAlchemyError
 import string
 import random
 import datetime
@@ -94,7 +95,10 @@ def shorten_url():
     input_url = data.get('url')
 
     if not input_url:
-        return jsonify({'error': "URL is required, please make sure there is an element called 'url' in the JSON you're passing"}), 400
+        return jsonify({
+            'Error': "No URL found",
+            "Message": "URL is required, please make sure there is an element called 'url' in the JSON you're passing",
+        }), 400
 
     # Check if the long URL is already in the database and, if yes, return the corresponding shortened URL
     session = Session()
@@ -162,7 +166,10 @@ def get_url_stats(shortcode):
         return jsonify(stats), 200
     else:
         session.close()
-        return jsonify({"error": "Short URL not found"}), 404
+        return jsonify({
+            "Error": "Short URL not found",
+            "Message": "The short URL was not found in the database, please check if it's correct"
+        }), 404
 
 
 @app.route('/urls/<shortcode>', methods=['GET'])
@@ -209,7 +216,22 @@ def shortened_url(shortcode):
         return jsonify({'Location': "{}".format(long_url)}), 307
     else:
         session.close()
-        return jsonify({"error": "Short URL not present in database, please make sure it's written correctly"}), 404
+        return jsonify({
+            "Error": "Short URL not found"
+            "Message": "The short URL was not found in the database, please check if it's correct",
+        }), 404
+
+
+# Define custom error handlers
+
+@app.errorhandler(SQLAlchemyError)
+def handle_database_error(e):
+    response = jsonify({
+        "Error": "A database connection error occurred",
+        "Message": "Sorry, there was a problem connecting to the database. Please ensure that the database is available and try again."
+    })
+    response.status_code = 500
+    return response
 
 
 app.run()
