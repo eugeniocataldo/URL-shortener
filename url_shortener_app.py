@@ -31,6 +31,17 @@ class UrlMapping(Base):
 # Initialize all database tables
 Base.metadata.create_all(engine)
 
+# If the database is just created, add an initial entry (used for testing)
+session = Session()
+initial_entry = UrlMapping(short_url="initial", long_url="https://example.com/initial-url")
+initial_entry_already_in = session.query(UrlMapping).filter_by(long_url="https://example.com/initial-url").first()
+
+if not initial_entry_already_in:
+    session.add(initial_entry)
+    session.commit()
+
+session.close()
+
 
 def generate_short_url():
     """Generate a unique 6-characters URL
@@ -233,5 +244,5 @@ def handle_database_error(e):
     response.status_code = 500
     return response
 
-
-app.run()
+if __name__ == '__main__':
+    app.run()
