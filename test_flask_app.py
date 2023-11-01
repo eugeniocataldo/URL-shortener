@@ -41,7 +41,7 @@ def generate_new_url(field_name):
         if not already_in_db:
             session.close()
             break
-        
+
         # Edit string if it's already in the database
         my_string += "test"
 
@@ -163,7 +163,7 @@ def test_stats_non_existing_url():
 
     # Start a test session
     client = app.test_client()
-    
+
     # Craft a short URL that is not in the database
     my_string = generate_new_url(field_name="short_url")
 
