@@ -52,7 +52,7 @@ def test_shorten_existing_url(app_context):
     assert response.status_code == 303
     response_data = json.loads(response.data)
     assert 'Location' in response_data
-    assert response_data['Location'] == "/urls/initial"
+    assert response_data['Location'] == "/urls/hardcoded_entry_do_not_modify"
 
 def test_shorten_new_url():
 
@@ -92,7 +92,7 @@ def test_stats_existing_url():
 
     client = app.test_client()
 
-    response = client.get('urls/initial/stats')
+    response = client.get('urls/hardcoded_entry_do_not_modify/stats')
 
     assert response.status_code == 200
     response_data = json.loads(response.data)
@@ -116,7 +116,7 @@ def test_shortcode_existing_url():
 
     client = app.test_client()
 
-    response = client.get('urls/initial')
+    response = client.get('urls/hardcoded_entry_do_not_modify')
 
     assert response.status_code == 307
     response_data = json.loads(response.data)

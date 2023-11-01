@@ -33,7 +33,7 @@ Base.metadata.create_all(engine)
 
 # If the database is just created, add an initial entry (used for testing)
 session = Session()
-initial_entry = UrlMapping(short_url="initial", long_url="https://example.com/initial-url")
+initial_entry = UrlMapping(short_url="hardcoded_entry_do_not_modify", long_url="https://example.com/initial-url")
 initial_entry_already_in = session.query(UrlMapping).filter_by(long_url="https://example.com/initial-url").first()
 
 if not initial_entry_already_in:
