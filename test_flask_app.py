@@ -22,28 +22,28 @@ def generate_new_url(field_name):
     """
 
     # Generate an URL and check that it's unique (in the extreme case someone saved a URL like "test")
-    session = Session()
-    my_string = "test"
+    with Session() as s: 
+      my_string = "test"
 
-    # Start a loop to check if the sample string is already in and, if yes, change it until it's unique
-    while True:
-        # Small logic to search over different fields in the database
-        if field_name == "long_url":
-            already_in_db = session.query(UrlMapping).filter_by(
-                long_url=my_string).first()
-        elif field_name == "short_url":
-            already_in_db = session.query(UrlMapping).filter_by(
-                short_url=my_string).first()
-        else:
-            raise ValueError("Invalid field_name specified")
+      # Start a loop to check if the sample string is already in and, if yes, change it until it's unique
+      while True:
+          # Small logic to search over different fields in the database
+          if field_name == "long_url":
+              already_in_db = s.query(UrlMapping).filter_by(
+                  long_url=my_string).first()
+          elif field_name == "short_url":
+              already_in_db = s.query(UrlMapping).filter_by(
+                  short_url=my_string).first()
+          else:
+              raise ValueError("Invalid field_name specified")
 
-        # Once string is not in database, close session and get out of loop
-        if not already_in_db:
-            session.close()
-            break
+          # Once string is not in database, close session and get out of loop
+          if not already_in_db:
+              s.close()
+              break
 
-        # Edit string if it's already in the database
-        my_string += "test"
+          # Edit string if it's already in the database
+          my_string += "test"
 
     return my_string
 

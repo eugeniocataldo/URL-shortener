@@ -24,7 +24,7 @@ class UrlMapping(Base):
     id = Column(Integer, primary_key=True)
     short_url = Column(String)
     long_url = Column(String)
-    created_on = Column(DateTime, default=datetime.datetime.utcnow)
+    created_on = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
     hit_count = Column(Integer, default=0)
 
 
@@ -32,17 +32,15 @@ class UrlMapping(Base):
 Base.metadata.create_all(engine)
 
 # If the database is just created, add an initial entry (used for testing)
-session = Session()
-initial_entry = UrlMapping(short_url="hardcoded_entry_do_not_modify",
-                           long_url="https://example.com/initial-url")
-initial_entry_already_in = session.query(UrlMapping).filter_by(
-    long_url="https://example.com/initial-url").first()
+with Session() as s:
+    initial_entry = UrlMapping(short_url="hardcoded_entry_do_not_modify",
+                            long_url="https://example.com/initial-url")
+    initial_entry_already_in = s.query(UrlMapping).filter_by(
+        long_url="https://example.com/initial-url").first()
 
-if not initial_entry_already_in:
-    session.add(initial_entry)
-    session.commit()
-
-session.close()
+    if not initial_entry_already_in:
+        s.add(initial_entry)
+        s.commit()
 
 
 def generate_short_url():
@@ -61,14 +59,13 @@ def generate_short_url():
         short_url = ''.join(random.choice(characters) for _ in range(6))
 
         # Check whether the shortened URL is unique or is already present in the database
-        session = Session()
-        url_already_exists = session.query(
-            UrlMapping).filter_by(short_url=short_url).first()
+        
+        with Session() as s:
+            url_already_exists = s.query(
+                UrlMapping).filter_by(short_url=short_url).first()
 
         if url_already_exists:
-            continue  # If already present, generate a new one
-
-        session.close()
+            continue  # If already present, go back at the beginning of the loop to generate a new one
 
         return short_url
 
@@ -114,21 +111,19 @@ def shorten_url():
         }), 400
 
     # Check if the long URL is already in the database and, if yes, return the corresponding shortened URL
-    session = Session()
-    url_already_mapped = session.query(
-        UrlMapping).filter_by(long_url=input_url).first()
+    with Session() as s:
+        url_already_mapped = s.query(
+            UrlMapping).filter_by(long_url=input_url).first()
 
-    if url_already_mapped:
-        session.close()
-        return jsonify({'Location': "/urls/{}".format(url_already_mapped.short_url)}), 303
+        if url_already_mapped:
+            return jsonify({'Location': "/urls/{}".format(url_already_mapped.short_url)}), 303
+        else:
+            # If URL is not in the database yet, add it to the database
+            short_url = generate_short_url()
+            s.add(UrlMapping(short_url=short_url, long_url=input_url))
+            s.commit()
 
-    # If URL is not in the database yet, add it to the database
-    short_url = generate_short_url()
-    session.add(UrlMapping(short_url=short_url, long_url=input_url))
-    session.commit()
-    session.close()
-
-    return jsonify({'Location': "/urls/{}".format(short_url)}), 201
+            return jsonify({'Location': "/urls/{}".format(short_url)}), 201
 
 
 @app.route('/urls/<shortcode>/stats', methods=['GET'])
@@ -164,10 +159,10 @@ def get_url_stats(shortcode):
         - 404 (Error) if the short URL is not in the database
     """
 
-    session = Session()
+    with Session() as s:
 
-    selected_url = session.query(UrlMapping).filter_by(
-        short_url=shortcode).first()
+        selected_url = s.query(UrlMapping).filter_by(
+            short_url=shortcode).first()
 
     if selected_url:
         stats = {
@@ -175,10 +170,8 @@ def get_url_stats(shortcode):
             "url": selected_url.long_url,
             "created_on": selected_url.created_on.isoformat(),
         }
-        session.close()
         return jsonify(stats), 200
     else:
-        session.close()
         return jsonify({
             "Error": "Short URL not found",
             "Message": "The short URL was not found in the database, please check if it's correct"
@@ -213,26 +206,24 @@ def shortened_url(shortcode):
         - 404 (Error) if the short URL is not in the database
     """
 
-    session = Session()
+    with Session() as s:
 
-    selected_url = session.query(UrlMapping).filter_by(
-        short_url=shortcode).first()
+        selected_url = s.query(UrlMapping).filter_by(
+            short_url=shortcode).first()
 
-    if selected_url:
-        # Pick out the long URL before updating the session
-        long_url = selected_url.long_url
-        # Update the hit count of the short URL
-        selected_url.hit_count += 1
-        session.commit()
-        session.close()
+        if selected_url:
+            # Pick out the long URL before updating the session
+            long_url = selected_url.long_url
+            # Update the hit count of the short URL
+            selected_url.hit_count += 1
+            s.commit()
 
-        return jsonify({'Location': "{}".format(long_url)}), 307
-    else:
-        session.close()
-        return jsonify({
-            "Error": "Short URL not found",
-            "Message": "The short URL was not found in the database, please check if it's correct",
-        }), 404
+            return jsonify({'Location': "{}".format(long_url)}), 307
+        else:
+            return jsonify({
+                "Error": "Short URL not found",
+                "Message": "The short URL was not found in the database, please check if it's correct",
+            }), 404
 
 
 # Define custom error handlers
